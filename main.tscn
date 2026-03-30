@@ -1,0 +1,103 @@
+[gd_scene load_steps=18 format=3 uid="uid://dtjdi4snwyaht"]
+
+[ext_resource type="Script" uid="uid://bw3h1sgkf5xad" path="res://players.gd" id="1_0xm2m"]
+[ext_resource type="Script" uid="uid://brok6kirw1qi7" path="res://player.gd" id="1_ig7tw"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ig7tw"]
+
+[sub_resource type="Sky" id="Sky_0xm2m"]
+sky_material = SubResource("ProceduralSkyMaterial_ig7tw")
+
+[sub_resource type="Environment" id="Environment_h2yge"]
+background_mode = 2
+sky = SubResource("Sky_0xm2m")
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_7dm0k"]
+top_radius = 50.0
+bottom_radius = 50.0
+height = 0.1
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_ig7tw"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ig7tw"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_0xm2m"]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_h2yge"]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_1bvp3"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_0xm2m"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_h2yge"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1bvp3"]
+albedo_color = Color(0.3604683, 0.7196149, 0.8661734, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_lquwl"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7mycd"]
+albedo_color = Color(0.28485027, 0.28485027, 0.28485027, 1)
+
+[sub_resource type="TorusMesh" id="TorusMesh_272bh"]
+inner_radius = 9.9
+outer_radius = 10.0
+
+[node name="Main" type="Node3D"]
+
+[node name="Node" type="Node" parent="."]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Node"]
+environment = SubResource("Environment_h2yge")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Node"]
+transform = Transform3D(0.51473886, -0.4125316, 0.75157267, 0, 0.87662596, 0.4811723, -0.857347, -0.24767807, 0.45123345, 0, 0, 0)
+
+[node name="Floor" type="StaticBody3D" parent="."]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0030503273, -0.09680889, -0.0015902519)
+mesh = SubResource("CylinderMesh_7dm0k")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("WorldBoundaryShape3D_ig7tw")
+
+[node name="Box" type="StaticBody3D" parent="."]
+transform = Transform3D(0.70710677, 0, -0.70710677, 0, 1, 0, 0.70710677, 0, 0.70710677, 0, 1, -5)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Box"]
+shape = SubResource("BoxShape3D_ig7tw")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Box"]
+mesh = SubResource("BoxMesh_0xm2m")
+
+[node name="Players" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("SceneReplicationConfig_h2yge")
+script = ExtResource("1_0xm2m")
+
+[node name="Player" type="CharacterBody3D" parent="Players"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+script = ExtResource("1_ig7tw")
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="Players/Player"]
+replication_config = SubResource("SceneReplicationConfig_1bvp3")
+
+[node name="Camera3D" type="Camera3D" parent="Players/Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.54624116, -0.3309623)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Players/Player"]
+shape = SubResource("CapsuleShape3D_0xm2m")
+
+[node name="Body" type="MeshInstance3D" parent="Players/Player"]
+mesh = SubResource("CapsuleMesh_h2yge")
+surface_material_override/0 = SubResource("StandardMaterial3D_1bvp3")
+
+[node name="Eyes" type="MeshInstance3D" parent="Players/Player"]
+transform = Transform3D(0.5, 0, 0, 0, 0.3, 0, 0, 0, 0.2, 0, 0.5, -0.4)
+mesh = SubResource("BoxMesh_lquwl")
+surface_material_override/0 = SubResource("StandardMaterial3D_7mycd")
+
+[node name="ProximityRadius" type="MeshInstance3D" parent="Players/Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.9, 0)
+mesh = SubResource("TorusMesh_272bh")
+surface_material_override/0 = SubResource("StandardMaterial3D_1bvp3")
