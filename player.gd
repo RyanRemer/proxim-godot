@@ -23,18 +23,22 @@ var jump_vel: Vector3 # Jumping velocity
 @onready var camera: Camera3D = $Camera3D
 
 func _ready() -> void:
+	if not is_multiplayer_authority():
+		$Camera3D.current = false
+		set_physics_process(false)
+		set_process_unhandled_input(false)
+		return
 	capture_mouse()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		look_dir = event.relative * 0.001
 		if mouse_captured: _rotate_camera()
-	if Input.is_action_just_pressed(&"exit"): get_tree().quit()
 	if Input.is_action_just_pressed(&"tab"):
 		if mouse_captured:
 			release_mouse();
 		else:
-			capture_mouse(); 
+			capture_mouse();
 
 func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed(&"jump"): jumping = true

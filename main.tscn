@@ -1,7 +1,6 @@
-[gd_scene load_steps=18 format=3 uid="uid://dtjdi4snwyaht"]
+[gd_scene load_steps=9 format=3 uid="uid://dtjdi4snwyaht"]
 
-[ext_resource type="Script" uid="uid://bw3h1sgkf5xad" path="res://players.gd" id="1_0xm2m"]
-[ext_resource type="Script" uid="uid://brok6kirw1qi7" path="res://player.gd" id="1_ig7tw"]
+[ext_resource type="Script" uid="uid://dxnrmynis88hg" path="res://main.gd" id="1_main"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ig7tw"]
 
@@ -23,27 +22,8 @@ height = 0.1
 
 [sub_resource type="BoxMesh" id="BoxMesh_0xm2m"]
 
-[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_h2yge"]
-
-[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_1bvp3"]
-
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_0xm2m"]
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_h2yge"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1bvp3"]
-albedo_color = Color(0.3604683, 0.7196149, 0.8661734, 1)
-
-[sub_resource type="BoxMesh" id="BoxMesh_lquwl"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7mycd"]
-albedo_color = Color(0.28485027, 0.28485027, 0.28485027, 1)
-
-[sub_resource type="TorusMesh" id="TorusMesh_272bh"]
-inner_radius = 9.9
-outer_radius = 10.0
-
 [node name="Main" type="Node3D"]
+script = ExtResource("1_main")
 
 [node name="Node" type="Node" parent="."]
 
@@ -71,33 +51,10 @@ shape = SubResource("BoxShape3D_ig7tw")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Box"]
 mesh = SubResource("BoxMesh_0xm2m")
 
-[node name="Players" type="MultiplayerSynchronizer" parent="."]
-replication_config = SubResource("SceneReplicationConfig_h2yge")
-script = ExtResource("1_0xm2m")
+[node name="Players" type="Node3D" parent="."]
 
-[node name="Player" type="CharacterBody3D" parent="Players"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-script = ExtResource("1_ig7tw")
+[node name="UI" type="CanvasLayer" parent="."]
 
-[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="Players/Player"]
-replication_config = SubResource("SceneReplicationConfig_1bvp3")
-
-[node name="Camera3D" type="Camera3D" parent="Players/Player"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.54624116, -0.3309623)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Players/Player"]
-shape = SubResource("CapsuleShape3D_0xm2m")
-
-[node name="Body" type="MeshInstance3D" parent="Players/Player"]
-mesh = SubResource("CapsuleMesh_h2yge")
-surface_material_override/0 = SubResource("StandardMaterial3D_1bvp3")
-
-[node name="Eyes" type="MeshInstance3D" parent="Players/Player"]
-transform = Transform3D(0.5, 0, 0, 0, 0.3, 0, 0, 0, 0.2, 0, 0.5, -0.4)
-mesh = SubResource("BoxMesh_lquwl")
-surface_material_override/0 = SubResource("StandardMaterial3D_7mycd")
-
-[node name="ProximityRadius" type="MeshInstance3D" parent="Players/Player"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.9, 0)
-mesh = SubResource("TorusMesh_272bh")
-surface_material_override/0 = SubResource("StandardMaterial3D_1bvp3")
+[node name="ProximityLabel" type="Label" parent="UI"]
+offset_left = 10.0
+offset_top = 10.0
