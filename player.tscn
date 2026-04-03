@@ -30,6 +30,7 @@ properties/1/spawn = false
 properties/1/replication_mode = 1
 
 [node name="Player" type="CharacterBody3D"]
+collision_layer = 2
 script = ExtResource("1_player")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]

@@ -6,13 +6,48 @@ var _players: Dictionary = {}          # peer_id (int) → Player node
 
 @onready var _spawn_root: Node = $Players
 @onready var _proximity_label: Label = $UI/ProximityLabel
+@onready var _modal: Panel = $UI/Modal
 
-var _proximity_enabled: bool = true
+var _proximity_enabled: bool = false
 const PROXIMITY_MAX_DISTANCE := 20.0
+var _proximity_update_timer: float = 0.0
+const PROXIMITY_UPDATE_INTERVAL := 1.0
 
 func _ready() -> void:
-	_setup_proxim()
+	$UI/Modal/VBox/ENetHostButton.pressed.connect(_on_enet_host_pressed)
+	$UI/Modal/VBox/ENetJoinButton.pressed.connect(_on_enet_join_pressed)
+	$UI/Modal/VBox/ProximButton.pressed.connect(_on_proxim_pressed)
 	_update_proximity_label()
+
+func _on_enet_host_pressed() -> void:
+	_setup_enet(true)
+	_modal.hide()
+
+func _on_enet_join_pressed() -> void:
+	_setup_enet(false)
+	_modal.hide()
+
+func _on_proxim_pressed() -> void:
+	_setup_proxim()
+	_modal.hide()
+
+func _setup_enet(is_host: bool) -> void:
+	var enet := ENetMultiplayerPeer.new()
+	if is_host:
+		enet.create_server(7777)
+		multiplayer.multiplayer_peer = enet
+		multiplayer.peer_connected.connect(_on_peer_connected)
+		multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+		_spawn_player(multiplayer.get_unique_id())
+	else:
+		enet.create_client("127.0.0.1", 7777)
+		multiplayer.multiplayer_peer = enet
+		multiplayer.peer_connected.connect(_on_peer_connected)
+		multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+		multiplayer.connected_to_server.connect(_on_enet_connected_to_server)
+
+func _on_enet_connected_to_server() -> void:
+	_spawn_player(multiplayer.get_unique_id())
 
 func _setup_proxim() -> void:
 	_proxim_peer = ProximPeer.new()
@@ -41,7 +76,7 @@ func _on_welcomed(my_id: int, _peers: Array) -> void:
 	_spawn_player(my_id)
 
 func _on_peer_connected(peer_id: int) -> void:
-	print("[main] peer_connected signal: id=%d (connection_status=%d)" % [peer_id, _mp.get_connection_status()])
+	print("[main] peer_connected signal: id=%d" % peer_id)
 	_spawn_player(peer_id)
 
 func _on_peer_disconnected(peer_id: int) -> void:
@@ -67,13 +102,18 @@ func _despawn_player(peer_id: int) -> void:
 	_players[peer_id].queue_free()
 	_players.erase(peer_id)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if _proximity_enabled:
-		_update_proximity_volumes()
+		_proximity_update_timer += delta
+		if _proximity_update_timer >= PROXIMITY_UPDATE_INTERVAL:
+			_proximity_update_timer = 0.0
+			_update_proximity_volumes()
 
-## Runs every frame when proximity chat is ON.
+## Runs on a 1-second interval when proximity chat is ON.
 ## Computes distance to each remote player, maps to 0.0–1.0 volume.
 func _update_proximity_volumes() -> void:
+	if _mp == null:
+		return
 	var my_id := multiplayer.get_unique_id()
 	var local_player := _players.get(my_id, null) as Node3D
 	if local_player == null:
@@ -87,6 +127,8 @@ func _update_proximity_volumes() -> void:
 
 ## Called once when toggled OFF. Resets all peers to full volume.
 func _set_all_volumes_flat() -> void:
+	if _mp == null:
+		return
 	var my_id := multiplayer.get_unique_id()
 	for peer_id: int in _players:
 		if peer_id == my_id:
