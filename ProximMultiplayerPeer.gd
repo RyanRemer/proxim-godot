@@ -2,7 +2,7 @@
 ## two-route WebSocket protocol.
 ##
 ## Depends on a ProximPeer instance for session state (peer IDs, names, volume).
-## Adds the /godot binary data pipe and wires Godot's multiplayer interface.
+## Adds the /bytes binary data pipe and wires Godot's multiplayer interface.
 ##
 ## Usage:
 ##   var proxim_peer := ProximPeer.new()
@@ -17,7 +17,7 @@ class_name ProximMultiplayerPeer extends MultiplayerPeerExtension
 ## was added to the scene tree.
 var proxim_peer: ProximPeer = null
 
-const _URL := "ws://127.0.0.1:5656/godot"
+const _URL := "ws://127.0.0.1:5656/bytes"
 const _MAX_RECONNECT_DELAY := 30.0
 
 var _ws := WebSocketPeer.new()
@@ -34,19 +34,20 @@ var _transfer_mode: int = MultiplayerPeer.TRANSFER_MODE_RELIABLE
 var _transfer_channel: int = 0
 
 
-func _ready() -> void:
-	if proxim_peer == null:
-		push_error("ProximMultiplayerPeer: proxim_peer must be set before _ready()")
-		return
+func _init(peer: ProximPeer) -> void:
+	proxim_peer = peer
 	proxim_peer.welcomed.connect(_on_welcomed)
-	proxim_peer.peer_joined.connect(_on_peer_joined)
-	proxim_peer.peer_left.connect(_on_peer_left)
+	proxim_peer.peer_joined_call.connect(_on_call_peer_joined)
+	proxim_peer.peer_left_call.connect(_on_call_peer_left)
 	_connect_godot()
 
 
 func _connect_godot() -> void:
 	_ws = WebSocketPeer.new()
-	_ws.connect_to_url(_URL)
+	print("[ProximMP] connecting to %s" % _URL)
+	var err := _ws.connect_to_url(_URL)
+	if err != OK:
+		print("[ProximMP] connect_to_url failed: %s" % error_string(err))
 
 
 # --- MultiplayerPeerExtension overrides ---
@@ -57,7 +58,7 @@ func _poll() -> void:
 	if proxim_peer != null:
 		proxim_peer._poll()
 
-	# Poll the /godot data pipe
+	# Poll the /bytes data pipe
 	if _reconnect_timer > 0.0:
 		return
 	_ws.poll()
@@ -65,6 +66,7 @@ func _poll() -> void:
 
 	if state == WebSocketPeer.STATE_OPEN:
 		if not _ws_open:
+			print("[ProximMP] /bytes WebSocket opened")
 			_ws_open = true
 		while _ws.get_available_packet_count() > 0:
 			var raw := _ws.get_packet()
@@ -80,6 +82,7 @@ func _poll() -> void:
 
 	elif state == WebSocketPeer.STATE_CLOSED:
 		if _ws_open:
+			print("[ProximMP] /bytes WebSocket closed (code=%d reason=%s)" % [_ws.get_close_code(), _ws.get_close_reason()])
 			_ws_open = false
 		_schedule_reconnect()
 
@@ -183,17 +186,22 @@ func _disconnect_peer(_peer_id: int, _force: bool) -> void:
 # --- ProximPeer signal handlers ---
 
 func _on_welcomed(id: int, peers: Array) -> void:
+	print("[ProximMP] welcomed: our_id=%d, existing peers=%s" % [id, peers])
 	peer_connected.emit(id)          # emit our own ID as "connected"
 	for p: Variant in peers:
 		if typeof(p) == TYPE_DICTIONARY:
-			peer_connected.emit(p.get("id", 0) as int)
+			var peer_id := p.get("id", 0) as int
+			print("[ProximMP] emitting peer_connected for pre-existing peer id=%d" % peer_id)
+			peer_connected.emit(peer_id)
 
 
-func _on_peer_joined(id: int, _name: String) -> void:
+func _on_call_peer_joined(id: int, _name: String) -> void:
+	print("[ProximMP] peer joined call id=%d name=%s — emitting peer_connected" % [id, _name])
 	peer_connected.emit(id)
 
 
-func _on_peer_left(id: int) -> void:
+func _on_call_peer_left(id: int) -> void:
+	print("[ProximMP] peer left call id=%d — emitting peer_disconnected" % id)
 	peer_disconnected.emit(id)
 
 

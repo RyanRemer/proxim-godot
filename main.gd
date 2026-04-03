@@ -18,8 +18,7 @@ func _setup_proxim() -> void:
 	_proxim_peer = ProximPeer.new()
 	add_child(_proxim_peer)
 
-	_mp = ProximMultiplayerPeer.new()
-	_mp.proxim_peer = _proxim_peer
+	_mp = ProximMultiplayerPeer.new(_proxim_peer)
 	multiplayer.multiplayer_peer = _mp
 
 	multiplayer.peer_connected.connect(_on_peer_connected)
@@ -38,17 +37,22 @@ func _unhandled_input(event: InputEvent) -> void:
 func _on_welcomed(my_id: int, _peers: Array) -> void:
 	# peer_connected fires for pre-existing peers via ProximMultiplayerPeer._on_welcomed.
 	# Only need to spawn our own player here.
+	print("[main] welcomed: our id=%d" % my_id)
 	_spawn_player(my_id)
 
 func _on_peer_connected(peer_id: int) -> void:
+	print("[main] peer_connected signal: id=%d (connection_status=%d)" % [peer_id, _mp.get_connection_status()])
 	_spawn_player(peer_id)
 
 func _on_peer_disconnected(peer_id: int) -> void:
+	print("[main] peer_disconnected signal: id=%d" % peer_id)
 	_despawn_player(peer_id)
 
 func _spawn_player(peer_id: int) -> void:
 	if _players.has(peer_id):
+		print("[main] _spawn_player id=%d — already exists, skipping" % peer_id)
 		return
+	print("[main] spawning player id=%d" % peer_id)
 	var player: Player = preload("res://player.tscn").instantiate()
 	player.name = str(peer_id)           # must match peer_id for sync path agreement
 	player.set_multiplayer_authority(peer_id)
@@ -57,7 +61,9 @@ func _spawn_player(peer_id: int) -> void:
 
 func _despawn_player(peer_id: int) -> void:
 	if not _players.has(peer_id):
+		print("[main] _despawn_player id=%d — not found, skipping" % peer_id)
 		return
+	print("[main] despawning player id=%d" % peer_id)
 	_players[peer_id].queue_free()
 	_players.erase(peer_id)
 

@@ -14,11 +14,17 @@ signal connected
 ## peers is an Array of Dictionaries: [{ "id": int, "name": String }, ...]
 signal welcomed(your_id: int, peers: Array)
 
-## Emitted when a peer's WebRTC connection becomes active.
-signal peer_joined(id: int, name: String)
+## Emitted when a peer's WebRTC connection becomes active (joined the Proxim call).
+signal peer_joined_call(id: int, name: String)
 
-## Emitted when a peer leaves the room.
-signal peer_left(id: int)
+## Emitted when a peer leaves the Proxim call.
+signal peer_left_call(id: int)
+
+## Emitted when a peer joins the game session.
+signal peer_joined_game(id: int, name: String)
+
+## Emitted when a peer leaves the game session (explicit leave or call disconnect).
+signal peer_left_game(id: int)
 
 ## Our stable integer peer ID within this session (0 until welcomed).
 var your_id: int = 0
@@ -28,6 +34,7 @@ const _MAX_RECONNECT_DELAY := 30.0
 
 var _ws := WebSocketPeer.new()
 var _peer_names: Dictionary = {}     # int -> String
+var _game_peers: Dictionary = {}     # int -> String (peers currently in the game session)
 var _reconnect_timer: float = 0.0
 var _reconnect_delay: float = 1.0
 var _open: bool = false
@@ -50,7 +57,10 @@ func _connect_ws() -> void:
 	_ws = WebSocketPeer.new()
 	var err := _ws.connect_to_url(_URL)
 	if err != OK:
+		print("[ProximPeer] connect_to_url failed (err=%d), will retry" % err)
 		_schedule_reconnect()
+	else:
+		print("[ProximPeer] connecting to %s" % _URL)
 
 
 ## Drain buffered WebSocket frames and route control messages.
@@ -66,9 +76,11 @@ func _poll() -> void:
 
 	elif state == WebSocketPeer.STATE_CLOSED:
 		if _open:
+			print("[ProximPeer] connection closed, will retry")
 			_open = false
 			your_id = 0
 			_peer_names.clear()
+			_game_peers.clear()
 		_schedule_reconnect()
 
 
@@ -80,15 +92,19 @@ func _handle_message(text: String) -> void:
 	if typeof(msg) != TYPE_DICTIONARY:
 		return
 
-	match msg.get("type", ""):
+	var msg_type: String = msg.get("type", "")
+	print("[ProximPeer] recv: %s" % msg_type)
+	match msg_type:
 		"hello":
 			var version: int = msg.get("version", 0)
 			if version != 1:
 				push_warning("ProximPeer: unsupported protocol version %d" % version)
+			print("[ProximPeer] hello version=%d — sending get_state" % version)
 			_open = true
+			_ws.send_text(JSON.stringify({"type": "get_state"}))
 			connected.emit()
 
-		"welcome":
+		"state":
 			your_id = msg.get("your_id", 0)
 			var peers: Array = []
 			for p: Variant in msg.get("peers", []):
@@ -98,25 +114,79 @@ func _handle_message(text: String) -> void:
 				var name: String = p.get("name", "")
 				_peer_names[id] = name
 				peers.append({"id": id, "name": name})
+			for p: Variant in msg.get("game_peers", []):
+				if typeof(p) != TYPE_DICTIONARY:
+					continue
+				var id: int = p.get("id", 0)
+				var name: String = p.get("name", "")
+				_game_peers[id] = name
+				peer_joined_game.emit(id, name)
+			print("[ProximPeer] state: your_id=%d peers=%s game_peers=%s" % [your_id, peers, _game_peers.keys()])
 			welcomed.emit(your_id, peers)
 
 		"peer_connected":
 			var id: int = msg.get("id", 0)
 			var name: String = msg.get("name", "")
+			print("[ProximPeer] peer_connected: id=%d name=%s" % [id, name])
 			_peer_names[id] = name
-			peer_joined.emit(id, name)
+			peer_joined_call.emit(id, name)
 
 		"peer_disconnected":
 			var id: int = msg.get("id", 0)
+			print("[ProximPeer] peer_disconnected: id=%d" % id)
 			_peer_names.erase(id)
-			peer_left.emit(id)
+			peer_left_call.emit(id)
+			if _game_peers.erase(id):
+				peer_left_game.emit(id)
+
+		"peer_joined_game":
+			var id: int = msg.get("id", 0)
+			var name: String = msg.get("name", "")
+			print("[ProximPeer] peer_joined_game: id=%d name=%s" % [id, name])
+			_game_peers[id] = name
+			peer_joined_game.emit(id, name)
+
+		"peer_left_game":
+			var id: int = msg.get("id", 0)
+			print("[ProximPeer] peer_left_game: id=%d" % id)
+			if _game_peers.erase(id):
+				peer_left_game.emit(id)
+
+		_:
+			print("[ProximPeer] unhandled message type: %s" % msg_type)
+
+
+## Notify Proxim that this player has entered the game session.
+## Proxim will broadcast peer_joined_game to all other call members.
+func join_game() -> void:
+	if _ws.get_ready_state() != WebSocketPeer.STATE_OPEN:
+		push_warning("[ProximPeer] join_game called but WS is not open")
+		return
+	print("[ProximPeer] send: join_game id=%d" % your_id)
+	_ws.send_text(JSON.stringify({"type": "join_game", "id": your_id}))
+
+
+## Notify Proxim that this player has left the game session.
+func leave_game() -> void:
+	if _ws.get_ready_state() != WebSocketPeer.STATE_OPEN:
+		push_warning("[ProximPeer] leave_game called but WS is not open")
+		return
+	print("[ProximPeer] send: leave_game id=%d" % your_id)
+	_ws.send_text(JSON.stringify({"type": "leave_game", "id": your_id}))
+
+
+## Returns a copy of the current id → name map for peers in the game session.
+func get_game_peers() -> Dictionary:
+	return _game_peers.duplicate()
 
 
 ## Send a volume multiplier for a specific peer to Proxim.
 ## multiplier 0.0 = silent, 1.0 = normal, > 1.0 = boosted.
 func set_peer_volume(peer_id: int, multiplier: float) -> void:
 	if _ws.get_ready_state() != WebSocketPeer.STATE_OPEN:
+		push_warning("[ProximPeer] set_peer_volume called but WS is not open")
 		return
+	print("[ProximPeer] send: set_volume peer_id=%d multiplier=%f" % [peer_id, multiplier])
 	_ws.send_text(JSON.stringify({
 		"type": "set_volume",
 		"peer_id": peer_id,
@@ -129,6 +199,7 @@ func get_peer_names() -> Dictionary:
 	return _peer_names.duplicate()
 
 
+
 ## Close the WebSocket connection and stop reconnecting.
 func close() -> void:
 	_ws.close()
@@ -137,5 +208,7 @@ func close() -> void:
 
 
 func _schedule_reconnect() -> void:
+	if _reconnect_timer <= 0.0:
+		print("[ProximPeer] scheduling reconnect in %.1fs" % _reconnect_delay)
 	_reconnect_timer = _reconnect_delay
 	_reconnect_delay = minf(_reconnect_delay * 2.0, _MAX_RECONNECT_DELAY)
