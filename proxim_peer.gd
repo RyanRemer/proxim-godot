@@ -11,6 +11,12 @@ var _proximity_buf := PackedByteArray()
 var _pending_call_peers: Variant = null  # null = waiting, Array = received
 
 
+func _log(msg: String) -> void:
+	var t := Time.get_time_dict_from_system()
+	var ms := Time.get_ticks_msec() % 1000
+	print("%02d:%02d:%02d.%03d [ProximPeer] %s" % [t.hour, t.minute, t.second, ms, msg])
+
+
 func _ready() -> void:
 	_proximity_buf.resize(8)
 	_multiplayer_peer.peer_disconnected.connect(_on_peer_disconnected)
@@ -23,7 +29,7 @@ func connect_to_app() -> WebSocketPeer.State:
 	var deadline := Time.get_ticks_msec() + 2000
 	while _web_socket.get_ready_state() == WebSocketPeer.STATE_CONNECTING:
 		if Time.get_ticks_msec() >= deadline:
-			print("[ProximPeer] connect_to_app: timed out")
+			_log("connect_to_app: timed out")
 			_web_socket.close()
 			return WebSocketPeer.STATE_CLOSED
 		await get_tree().process_frame
@@ -34,25 +40,25 @@ func connect_to_app() -> WebSocketPeer.State:
 ## with game_id 1. Returns OK on success, ERR_ALREADY_IN_USE if a host exists,
 ## or ERR_CANT_CONNECT if the WebSocket connection failed.
 func create_host() -> Error:
-	print("[ProximPeer] create_host: connecting to Proxim app...")
+	_log("create_host: connecting to Proxim app...")
 	if await connect_to_app() != WebSocketPeer.STATE_OPEN:
-		print("[ProximPeer] create_host: ERR_CANT_CONNECT")
+		_log("create_host: ERR_CANT_CONNECT")
 		return ERR_CANT_CONNECT
 
 	var peers := await get_call_peers()
 	for peer in peers:
 		if peer.get("is_host", false):
-			print("[ProximPeer] create_host: ERR_ALREADY_IN_USE — host already exists")
+			_log("create_host: ERR_ALREADY_IN_USE — host already exists")
 			return ERR_ALREADY_IN_USE
 
 	var err := _multiplayer_peer.create_server()
 	if err != OK:
-		print("[ProximPeer] create_host: _multiplayer_peer.create_server() failed — err=%d" % err)
+		_log("create_host: _multiplayer_peer.create_server() failed — err=%d" % err)
 		return err
 
 	_my_game_id = 1
 	update_peer({"is_host": true, "game_id": 1})
-	print("[ProximPeer] create_host: OK — game_id=1")
+	_log("create_host: OK — game_id=1")
 	return OK
 
 
@@ -61,9 +67,9 @@ func create_host() -> Error:
 ## ERR_CANT_CONNECT if the WebSocket failed, or ERR_DOES_NOT_EXIST if no host
 ## is found.
 func create_client() -> Error:
-	print("[ProximPeer] create_client: connecting to Proxim app...")
+	_log("create_client: connecting to Proxim app...")
 	if await connect_to_app() != WebSocketPeer.STATE_OPEN:
-		print("[ProximPeer] create_client: ERR_CANT_CONNECT")
+		_log("create_client: ERR_CANT_CONNECT")
 		return ERR_CANT_CONNECT
 
 	var peers := await get_call_peers()
@@ -74,7 +80,7 @@ func create_client() -> Error:
 			has_host = true
 		taken_ids.append(peer.get("game_id", 0))
 	if not has_host:
-		print("[ProximPeer] create_client: ERR_DOES_NOT_EXIST — no host found")
+		_log("create_client: ERR_DOES_NOT_EXIST — no host found")
 		return ERR_DOES_NOT_EXIST
 
 	var my_id: int
@@ -85,12 +91,12 @@ func create_client() -> Error:
 
 	var err := _multiplayer_peer.create_client(my_id)
 	if err != OK:
-		print("[ProximPeer] create_client: _multiplayer_peer.create_client() failed — err=%d" % err)
+		_log("create_client: _multiplayer_peer.create_client() failed — err=%d" % err)
 		return err
 
 	_my_game_id = my_id
 	update_peer({"game_id": my_id})
-	print("[ProximPeer] create_client: OK — game_id=%d" % my_id)
+	_log("create_client: OK — game_id=%d" % my_id)
 	return OK
 
 
@@ -110,7 +116,7 @@ func update_peer(data: Dictionary) -> void:
 ## For offer/answer: data should contain {"sdp": String}
 ## For ice:          data should contain {"media": String, "index": int, "name": String}
 func send_signal(to: int, signal_type: String, data: Dictionary) -> void:
-	print("[ProximPeer] send_signal: → %d type=%s" % [to, signal_type])
+	_log("send_signal: → %d type=%s" % [to, signal_type])
 	var msg := {"type": "signal", "to": to, "signal_type": signal_type}
 	msg.merge(data)
 	_web_socket.send_text(JSON.stringify(msg))
@@ -122,7 +128,7 @@ func start_peer(peer_game_id: int) -> void:
 	if peer_game_id in _peer_connections:
 		return
 	var offering := _my_game_id != 0 and _my_game_id < peer_game_id
-	print("[ProximPeer] start_peer: %d → %d (%s)" % [_my_game_id, peer_game_id, "offering" if offering else "waiting for offer"])
+	_log("start_peer: %d → %d (%s)" % [_my_game_id, peer_game_id, "offering" if offering else "waiting for offer"])
 	var conn := WebRTCPeerConnection.new()
 	conn.initialize({"iceServers": _ICE_SERVERS})
 	conn.session_description_created.connect(_on_session_description.bind(peer_game_id))
@@ -134,7 +140,7 @@ func start_peer(peer_game_id: int) -> void:
 
 
 func _on_session_description(type: String, sdp: String, peer_game_id: int) -> void:
-	print("[ProximPeer] session_description: type=%s peer=%d" % [type, peer_game_id])
+	_log("session_description: type=%s peer=%d" % [type, peer_game_id])
 	var conn: WebRTCPeerConnection = _peer_connections.get(peer_game_id)
 	if not conn:
 		return
@@ -143,7 +149,7 @@ func _on_session_description(type: String, sdp: String, peer_game_id: int) -> vo
 
 
 func _on_ice_candidate(media: String, index: int, candidate_name: String, peer_game_id: int) -> void:
-	print("[ProximPeer] ice_candidate: → %d media=%s index=%d" % [peer_game_id, media, index])
+	_log("ice_candidate: → %d media=%s index=%d" % [peer_game_id, media, index])
 	send_signal(peer_game_id, "ice", {"media": media, "index": index, "name": candidate_name})
 
 
@@ -173,7 +179,7 @@ func get_call_peers() -> Array:
 	var deadline := Time.get_ticks_msec() + 2000
 	while _pending_call_peers == null:
 		if Time.get_ticks_msec() >= deadline:
-			print("[ProximPeer] get_call_peers: timed out")
+			_log("get_call_peers: timed out")
 			return []
 		await get_tree().process_frame
 	var result: Array = _pending_call_peers
@@ -182,7 +188,7 @@ func get_call_peers() -> Array:
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
-	print("[ProximPeer] peer_disconnected: game_id=%d" % peer_id)
+	_log("peer_disconnected: game_id=%d" % peer_id)
 	_peer_connections.erase(peer_id)
 
 
@@ -201,7 +207,7 @@ func _process(_delta: float) -> void:
 				_pending_call_peers = msg.get("peers", [])
 			"player_joined":
 				var peer_id: int = msg.get("game_id", 0)
-				print("[ProximPeer] player_joined: game_id=%d — starting peer" % peer_id)
+				_log("player_joined: game_id=%d — starting peer" % peer_id)
 				start_peer(peer_id)
 			"signal":
 				_handle_signal(msg)
@@ -212,7 +218,7 @@ func _handle_signal(msg: Dictionary) -> void:
 	var signal_type: String = msg.get("signal_type", "")
 	if from == 0:
 		return
-	print("[ProximPeer] signal received: from=%d type=%s" % [from, signal_type])
+	_log("signal received: from=%d type=%s" % [from, signal_type])
 	# Lazily create a connection for the higher-id peer receiving the first offer.
 	if from not in _peer_connections:
 		start_peer(from)
