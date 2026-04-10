@@ -7,13 +7,25 @@ var _web_socket := WebSocketPeer.new()
 var _multiplayer_peer := WebRTCMultiplayerPeer.new()
 var _my_game_id: int = 0
 var _peer_connections: Dictionary = {}  # game_id (int) -> WebRTCPeerConnection
+var _proximity_buf := PackedByteArray()
+var _pending_call_peers: Variant = null  # null = waiting, Array = received
+
+
+func _ready() -> void:
+	_proximity_buf.resize(8)
+	_multiplayer_peer.peer_disconnected.connect(_on_peer_disconnected)
 
 
 func connect_to_app() -> WebSocketPeer.State:
 	if _web_socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
 		return WebSocketPeer.STATE_OPEN
 	_web_socket.connect_to_url(_PROXIM_URL)
+	var deadline := Time.get_ticks_msec() + 2000
 	while _web_socket.get_ready_state() == WebSocketPeer.STATE_CONNECTING:
+		if Time.get_ticks_msec() >= deadline:
+			print("[ProximPeer] connect_to_app: timed out")
+			_web_socket.close()
+			return WebSocketPeer.STATE_CLOSED
 		await get_tree().process_frame
 	return _web_socket.get_ready_state()
 
@@ -94,12 +106,12 @@ func update_peer(data: Dictionary) -> void:
 
 
 ## Relay a WebRTC signaling message to another peer through the Proxim app.
-## type: "offer" | "answer" | "ice"
+## signal_type: "offer" | "answer" | "ice"
 ## For offer/answer: data should contain {"sdp": String}
 ## For ice:          data should contain {"media": String, "index": int, "name": String}
-func send_signal(to: int, type: String, data: Dictionary) -> void:
-	print("[ProximPeer] send_signal: → %d type=%s" % [to, type])
-	var msg := {"type": "signal", "to": to, "signal_type": type}
+func send_signal(to: int, signal_type: String, data: Dictionary) -> void:
+	print("[ProximPeer] send_signal: → %d type=%s" % [to, signal_type])
+	var msg := {"type": "signal", "to": to, "signal_type": signal_type}
 	msg.merge(data)
 	_web_socket.send_text(JSON.stringify(msg))
 
@@ -145,38 +157,48 @@ func _on_ice_candidate(media: String, index: int, candidate_name: String, peer_g
 ##   z     float16  2 bytes — (bytes 5–6)
 ##   gain  uint8    1 byte  — 0–255 mapped to 0.0–1.0 (byte 7)
 func update_proximity(slot: int, x: float, y: float, z: float, gain: float) -> void:
-	var buf := PackedByteArray()
-	buf.resize(8)
-	buf[0] = slot & 0xFF
-	buf.encode_half(1, x)
-	buf.encode_half(3, y)
-	buf.encode_half(5, z)
-	buf[7] = int(clampf(gain, 0.0, 1.0) * 255.0) & 0xFF
-	_web_socket.send(buf)
+	_proximity_buf[0] = slot & 0xFF
+	_proximity_buf.encode_half(1, x)
+	_proximity_buf.encode_half(3, y)
+	_proximity_buf.encode_half(5, z)
+	_proximity_buf[7] = int(clampf(gain, 0.0, 1.0) * 255.0) & 0xFF
+	_web_socket.send(_proximity_buf)
 
 
 ## Request the current call peers from Proxim. Returns an Array of Dictionaries,
-## each with at least a "display_name" key.
+## each with at least a "display_name" key. Returns [] on timeout (2 s).
 func get_call_peers() -> Array:
+	_pending_call_peers = null
 	_web_socket.send_text(JSON.stringify({"type": "get_call_peers"}))
-	while true:
+	var deadline := Time.get_ticks_msec() + 2000
+	while _pending_call_peers == null:
+		if Time.get_ticks_msec() >= deadline:
+			print("[ProximPeer] get_call_peers: timed out")
+			return []
 		await get_tree().process_frame
-		_web_socket.poll()
-		if _web_socket.get_available_packet_count() > 0:
-			var msg: Variant = JSON.parse_string(_web_socket.get_packet().get_string_from_utf8())
-			if msg is Dictionary and msg.get("type") == "call_peers":
-				return msg.get("peers", [])
-	return []
+	var result: Array = _pending_call_peers
+	_pending_call_peers = null
+	return result
+
+
+func _on_peer_disconnected(peer_id: int) -> void:
+	print("[ProximPeer] peer_disconnected: game_id=%d" % peer_id)
+	_peer_connections.erase(peer_id)
 
 
 func _process(_delta: float) -> void:
 	_web_socket.poll()
 	_multiplayer_peer.poll()
 	while _web_socket.get_available_packet_count() > 0:
-		var msg: Variant = JSON.parse_string(_web_socket.get_packet().get_string_from_utf8())
+		var packet := _web_socket.get_packet()
+		if not _web_socket.was_string_packet():
+			continue
+		var msg: Variant = JSON.parse_string(packet.get_string_from_utf8())
 		if not msg is Dictionary:
 			continue
 		match msg.get("type"):
+			"call_peers":
+				_pending_call_peers = msg.get("peers", [])
 			"player_joined":
 				var peer_id: int = msg.get("game_id", 0)
 				print("[ProximPeer] player_joined: game_id=%d — starting peer" % peer_id)
