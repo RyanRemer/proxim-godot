@@ -1,6 +1,7 @@
-[gd_scene load_steps=9 format=3 uid="uid://dtjdi4snwyaht"]
+[gd_scene load_steps=10 format=3 uid="uid://dtjdi4snwyaht"]
 
 [ext_resource type="Script" uid="uid://dxnrmynis88hg" path="res://main.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://cgk1rdyrhnuxt" path="res://proxim_peer.gd" id="2_proxim"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ig7tw"]
 
@@ -51,6 +52,9 @@ shape = SubResource("BoxShape3D_ig7tw")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Box"]
 mesh = SubResource("BoxMesh_0xm2m")
 
+[node name="ProximPeer" type="Node" parent="."]
+script = ExtResource("2_proxim")
+
 [node name="Players" type="Node3D" parent="."]
 
 [node name="UI" type="CanvasLayer" parent="."]
@@ -59,34 +63,85 @@ mesh = SubResource("BoxMesh_0xm2m")
 offset_left = 10.0
 offset_top = 10.0
 
-[node name="Modal" type="Panel" parent="UI"]
+[node name="Modal" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -120.0
-offset_top = -80.0
-offset_right = 120.0
-offset_bottom = 80.0
+offset_left = -150.0
+offset_top = -155.0
+offset_right = 150.0
+offset_bottom = 155.0
 
-[node name="VBox" type="VBoxContainer" parent="UI/Modal"]
+[node name="Margin" type="MarginContainer" parent="UI/Modal"]
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
-theme_override_constants/separation = 8
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
 
-[node name="TitleLabel" type="Label" parent="UI/Modal/VBox"]
+[node name="VBox" type="VBoxContainer" parent="UI/Modal/Margin"]
 layout_mode = 2
-text = "Choose Mode"
+theme_override_constants/separation = 16
+
+[node name="ENetPanel" type="PanelContainer" parent="UI/Modal/Margin/VBox"]
+layout_mode = 2
+
+[node name="ENetMargin" type="MarginContainer" parent="UI/Modal/Margin/VBox/ENetPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="ENetVBox" type="VBoxContainer" parent="UI/Modal/Margin/VBox/ENetPanel/ENetMargin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ENetTitle" type="Label" parent="UI/Modal/Margin/VBox/ENetPanel/ENetMargin/ENetVBox"]
+layout_mode = 2
+text = "ENet"
 horizontal_alignment = 1
 
-[node name="ENetHostButton" type="Button" parent="UI/Modal/VBox"]
+[node name="ENetIPEdit" type="LineEdit" parent="UI/Modal/Margin/VBox/ENetPanel/ENetMargin/ENetVBox"]
 layout_mode = 2
-text = "ENet: Host"
+placeholder_text = "127.0.0.1"
 
-[node name="ENetJoinButton" type="Button" parent="UI/Modal/VBox"]
+[node name="ENetHostButton" type="Button" parent="UI/Modal/Margin/VBox/ENetPanel/ENetMargin/ENetVBox"]
 layout_mode = 2
-text = "ENet: Join"
+text = "Host"
 
-[node name="ProximButton" type="Button" parent="UI/Modal/VBox"]
+[node name="ENetJoinButton" type="Button" parent="UI/Modal/Margin/VBox/ENetPanel/ENetMargin/ENetVBox"]
+layout_mode = 2
+text = "Join"
+
+[node name="ProximPanel" type="PanelContainer" parent="UI/Modal/Margin/VBox"]
+layout_mode = 2
+
+[node name="ProximMargin" type="MarginContainer" parent="UI/Modal/Margin/VBox/ProximPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="ProximVBox" type="VBoxContainer" parent="UI/Modal/Margin/VBox/ProximPanel/ProximMargin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ProximTitle" type="Label" parent="UI/Modal/Margin/VBox/ProximPanel/ProximMargin/ProximVBox"]
 layout_mode = 2
 text = "Proxim"
+horizontal_alignment = 1
+
+[node name="ProximHostButton" type="Button" parent="UI/Modal/Margin/VBox/ProximPanel/ProximMargin/ProximVBox"]
+layout_mode = 2
+text = "Host"
+
+[node name="ProximJoinButton" type="Button" parent="UI/Modal/Margin/VBox/ProximPanel/ProximMargin/ProximVBox"]
+layout_mode = 2
+text = "Join"

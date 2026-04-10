@@ -15,6 +15,10 @@ run/main_scene="uid://dtjdi4snwyaht"
 config/features=PackedStringArray("4.5", "Mobile")
 config/icon="res://icon.svg"
 
+[autoload]
+
+ProximPeer="*res://proxim_peer.gd"
+
 [input]
 
 tab={
