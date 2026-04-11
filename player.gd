@@ -18,9 +18,11 @@ var look_dir: Vector2 # Input direction for look/aim
 
 var camera_pitch: float = 0.0 # Synced vertical look angle (radians)
 
-var walk_vel: Vector3 # Walking velocity 
-var grav_vel: Vector3 # Gravity velocity 
+var walk_vel: Vector3 # Walking velocity
+var grav_vel: Vector3 # Gravity velocity
 var jump_vel: Vector3 # Jumping velocity
+
+var interact_target = null
 
 @onready var camera: Camera3D = $Camera3D
 
@@ -41,6 +43,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			release_mouse();
 		else:
 			capture_mouse();
+	if Input.is_action_just_pressed(&"interact") and mouse_captured:
+		if interact_target:
+			interact_target.interact()
 
 func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed(&"jump"): jumping = true
@@ -49,6 +54,19 @@ func _physics_process(delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	$Eyes.rotation.x = camera_pitch
+	if is_multiplayer_authority():
+		_check_interact()
+
+func _check_interact() -> void:
+	var space = get_world_3d().direct_space_state
+	var cam_pos = camera.global_position
+	var cam_forward = -camera.global_transform.basis.z
+	var query = PhysicsRayQueryParameters3D.create(cam_pos, cam_pos + cam_forward * 3.0, 0xFFFFFFFF, [get_rid()])
+	var result = space.intersect_ray(query)
+	if result and result.collider.is_in_group("interactable"):
+		interact_target = result.collider
+	else:
+		interact_target = null
 
 func capture_mouse() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)

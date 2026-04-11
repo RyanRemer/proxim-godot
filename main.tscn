@@ -1,6 +1,7 @@
-[gd_scene load_steps=13 format=3 uid="uid://dtjdi4snwyaht"]
+[gd_scene load_steps=14 format=3 uid="uid://dtjdi4snwyaht"]
 
 [ext_resource type="Script" uid="uid://dxnrmynis88hg" path="res://main.gd" id="1_main"]
+[ext_resource type="PackedScene" uid="uid://cbbtn3dscn1xy" path="res://button.tscn" id="4_btscene"]
 [ext_resource type="Script" uid="uid://bfsm2sk52he2y" path="res://fall_limit.gd" id="2_1bvp3"]
 [ext_resource type="Script" uid="uid://cgk1rdyrhnuxt" path="res://proxim_peer.gd" id="2_proxim"]
 [ext_resource type="Script" uid="uid://cgi5gjvyggfq2" path="res://local_webrtc_peer.gd" id="3_localwebrtc"]
@@ -81,6 +82,9 @@ skeleton = NodePath("../..")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Platforms/SmallPatform2"]
 shape = SubResource("BoxShape3D_lquwl")
+
+[node name="ButtonStation" parent="Platforms" instance=ExtResource("4_btscene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, -24)
 
 [node name="Deaths" type="Node3D" parent="."]
 
