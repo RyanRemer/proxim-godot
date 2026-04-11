@@ -16,6 +16,8 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 var move_dir: Vector2 # Input direction for movement
 var look_dir: Vector2 # Input direction for look/aim
 
+var camera_pitch: float = 0.0 # Synced vertical look angle (radians)
+
 var walk_vel: Vector3 # Walking velocity 
 var grav_vel: Vector3 # Gravity velocity 
 var jump_vel: Vector3 # Jumping velocity
@@ -45,6 +47,9 @@ func _physics_process(delta: float) -> void:
 	velocity = _walk(delta) + _gravity(delta) + _jump(delta)
 	move_and_slide()
 
+func _process(_delta: float) -> void:
+	$Eyes.rotation.x = camera_pitch
+
 func capture_mouse() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	mouse_captured = true
@@ -54,8 +59,9 @@ func release_mouse() -> void:
 	mouse_captured = false
 
 func _rotate_camera(sens_mod: float = 1.0) -> void:
-	camera.rotation.y -= look_dir.x * camera_sens * sens_mod
+	rotation.y -= look_dir.x * camera_sens * sens_mod
 	camera.rotation.x = clamp(camera.rotation.x - look_dir.y * camera_sens * sens_mod, -1.5, 1.5)
+	camera_pitch = camera.rotation.x
 
 func _walk(delta: float) -> Vector3:
 	move_dir = Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_backward")
