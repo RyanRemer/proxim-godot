@@ -74,6 +74,8 @@ offset_left = -150.0
 offset_top = -155.0
 offset_right = 150.0
 offset_bottom = 155.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="Margin" type="MarginContainer" parent="UI/Modal"]
 layout_mode = 0

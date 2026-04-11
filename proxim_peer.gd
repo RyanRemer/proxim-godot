@@ -205,9 +205,9 @@ func _process(_delta: float) -> void:
 		match msg.get("type"):
 			"call_peers":
 				_pending_call_peers = msg.get("peers", [])
-			"player_joined":
+			"connection_request":
 				var peer_id: int = msg.get("game_id", 0)
-				_log("player_joined: game_id=%d — starting peer" % peer_id)
+				_log("connection_request: game_id=%d — starting peer" % peer_id)
 				start_peer(peer_id)
 			"signal":
 				_handle_signal(msg)
