@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cqfn8v3mhk7w2"]
+[gd_scene load_steps=8 format=3 uid="uid://cqfn8v3mhk7w2"]
 
 [ext_resource type="Script" uid="uid://brok6kirw1qi7" path="res://player.gd" id="1_player"]
 
@@ -13,13 +13,6 @@ albedo_color = Color(0.3604683, 0.7196149, 0.8661734, 1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_eyes"]
 albedo_color = Color(0.28485027, 0.28485027, 0.28485027, 1)
-
-[sub_resource type="TorusMesh" id="TorusMesh_radius"]
-inner_radius = 9.9
-outer_radius = 10.0
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_radius"]
-albedo_color = Color(0.3604683, 0.7196149, 0.8661734, 1)
 
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_player"]
 properties/0/path = NodePath(".:position")
@@ -47,11 +40,6 @@ surface_material_override/0 = SubResource("StandardMaterial3D_body")
 transform = Transform3D(0.5, 0, 0, 0, 0.3, 0, 0, 0, 0.2, 0, 0.5, -0.4)
 mesh = SubResource("BoxMesh_eyes")
 surface_material_override/0 = SubResource("StandardMaterial3D_eyes")
-
-[node name="ProximityRadius" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.9, 0)
-mesh = SubResource("TorusMesh_radius")
-surface_material_override/0 = SubResource("StandardMaterial3D_radius")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.54624116, -0.3309623)
