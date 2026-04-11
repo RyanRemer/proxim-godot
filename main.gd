@@ -12,19 +12,36 @@ var _proximity_update_timer: float = 0.0
 const PROXIMITY_UPDATE_INTERVAL := 1.0
 
 func _ready() -> void:
-	$UI/Modal/Margin/VBox/ENetPanel/ENetMargin/ENetVBox/ENetHostButton.pressed.connect(_on_enet_host_pressed)
-	$UI/Modal/Margin/VBox/ENetPanel/ENetMargin/ENetVBox/ENetJoinButton.pressed.connect(_on_enet_join_pressed)
+	$UI/Modal/Margin/VBox/WebRTCPanel/WebRTCMargin/WebRTCVBox/WebRTCHostButton.pressed.connect(_on_local_webrtc_host_pressed)
+	$UI/Modal/Margin/VBox/WebRTCPanel/WebRTCMargin/WebRTCVBox/WebRTCJoinButton.pressed.connect(_on_local_webrtc_join_pressed)
 	$UI/Modal/Margin/VBox/ProximPanel/ProximMargin/ProximVBox/ProximHostButton.pressed.connect(_on_proxim_host_pressed)
 	$UI/Modal/Margin/VBox/ProximPanel/ProximMargin/ProximVBox/ProximJoinButton.pressed.connect(_on_proxim_join_pressed)
 	_update_proximity_label()
 
-func _on_enet_host_pressed() -> void:
-	_setup_enet(true)
+func _on_local_webrtc_host_pressed() -> void:
+	var err = $LocalWebRTCPeer.create_host()
+	if err != OK:
+		print("[main] local webrtc host failed: %d" % err)
+		return
+	multiplayer.multiplayer_peer = $LocalWebRTCPeer.get_multiplayer_peer()
+	multiplayer.peer_connected.connect(_on_peer_connected)
+	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	_spawn_player(multiplayer.get_unique_id())
 	_modal.hide()
 
-func _on_enet_join_pressed() -> void:
-	_setup_enet(false)
+func _on_local_webrtc_join_pressed() -> void:
+	var err = $LocalWebRTCPeer.create_client()
+	if err != OK:
+		print("[main] local webrtc join failed: %d" % err)
+		return
+	multiplayer.multiplayer_peer = $LocalWebRTCPeer.get_multiplayer_peer()
+	multiplayer.peer_connected.connect(_on_peer_connected)
+	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	multiplayer.connected_to_server.connect(_on_local_webrtc_connected_to_server)
 	_modal.hide()
+
+func _on_local_webrtc_connected_to_server() -> void:
+	_spawn_player(multiplayer.get_unique_id())
 
 func _on_proxim_host_pressed() -> void:
 	_modal.hide()
@@ -51,28 +68,6 @@ func _on_proxim_join_pressed() -> void:
 	multiplayer.connected_to_server.connect(_on_proxim_connected_to_server)
 
 func _on_proxim_connected_to_server() -> void:
-	_spawn_player(multiplayer.get_unique_id())
-
-func _setup_enet(is_host: bool) -> void:
-	var enet := ENetMultiplayerPeer.new()
-	if is_host:
-		enet.create_server(7777)
-		multiplayer.multiplayer_peer = enet
-		multiplayer.peer_connected.connect(_on_peer_connected)
-		multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-		_spawn_player(multiplayer.get_unique_id())
-	else:
-		var ip_edit : LineEdit = $UI/Modal/Margin/VBox/ENetPanel/ENetMargin/ENetVBox/ENetIPEdit
-		var ip = ip_edit.text
-		if ip.is_empty():
-			ip = "127.0.0.1"
-		enet.create_client(ip, 7777)
-		multiplayer.multiplayer_peer = enet
-		multiplayer.peer_connected.connect(_on_peer_connected)
-		multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-		multiplayer.connected_to_server.connect(_on_enet_connected_to_server)
-
-func _on_enet_connected_to_server() -> void:
 	_spawn_player(multiplayer.get_unique_id())
 
 func _unhandled_input(event: InputEvent) -> void:

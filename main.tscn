@@ -1,7 +1,8 @@
-[gd_scene load_steps=10 format=3 uid="uid://dtjdi4snwyaht"]
+[gd_scene load_steps=11 format=3 uid="uid://dtjdi4snwyaht"]
 
 [ext_resource type="Script" uid="uid://dxnrmynis88hg" path="res://main.gd" id="1_main"]
 [ext_resource type="Script" uid="uid://cgk1rdyrhnuxt" path="res://proxim_peer.gd" id="2_proxim"]
+[ext_resource type="Script" uid="uid://cgi5gjvyggfq2" path="res://local_webrtc_peer.gd" id="3_localwebrtc"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ig7tw"]
 
@@ -52,6 +53,9 @@ shape = SubResource("BoxShape3D_ig7tw")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Box"]
 mesh = SubResource("BoxMesh_0xm2m")
 
+[node name="LocalWebRTCPeer" type="Node" parent="."]
+script = ExtResource("3_localwebrtc")
+
 [node name="ProximPeer" type="Node" parent="."]
 script = ExtResource("2_proxim")
 
@@ -90,34 +94,30 @@ theme_override_constants/margin_bottom = 10
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="ENetPanel" type="PanelContainer" parent="UI/Modal/Margin/VBox"]
+[node name="WebRTCPanel" type="PanelContainer" parent="UI/Modal/Margin/VBox"]
 layout_mode = 2
 
-[node name="ENetMargin" type="MarginContainer" parent="UI/Modal/Margin/VBox/ENetPanel"]
+[node name="WebRTCMargin" type="MarginContainer" parent="UI/Modal/Margin/VBox/WebRTCPanel"]
 layout_mode = 2
 theme_override_constants/margin_left = 8
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 
-[node name="ENetVBox" type="VBoxContainer" parent="UI/Modal/Margin/VBox/ENetPanel/ENetMargin"]
+[node name="WebRTCVBox" type="VBoxContainer" parent="UI/Modal/Margin/VBox/WebRTCPanel/WebRTCMargin"]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="ENetTitle" type="Label" parent="UI/Modal/Margin/VBox/ENetPanel/ENetMargin/ENetVBox"]
+[node name="WebRTCTitle" type="Label" parent="UI/Modal/Margin/VBox/WebRTCPanel/WebRTCMargin/WebRTCVBox"]
 layout_mode = 2
-text = "ENet"
+text = "WebRTC (Local)"
 horizontal_alignment = 1
 
-[node name="ENetIPEdit" type="LineEdit" parent="UI/Modal/Margin/VBox/ENetPanel/ENetMargin/ENetVBox"]
-layout_mode = 2
-placeholder_text = "127.0.0.1"
-
-[node name="ENetHostButton" type="Button" parent="UI/Modal/Margin/VBox/ENetPanel/ENetMargin/ENetVBox"]
+[node name="WebRTCHostButton" type="Button" parent="UI/Modal/Margin/VBox/WebRTCPanel/WebRTCMargin/WebRTCVBox"]
 layout_mode = 2
 text = "Host"
 
-[node name="ENetJoinButton" type="Button" parent="UI/Modal/Margin/VBox/ENetPanel/ENetMargin/ENetVBox"]
+[node name="WebRTCJoinButton" type="Button" parent="UI/Modal/Margin/VBox/WebRTCPanel/WebRTCMargin/WebRTCVBox"]
 layout_mode = 2
 text = "Join"
 

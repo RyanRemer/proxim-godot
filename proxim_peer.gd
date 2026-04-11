@@ -9,6 +9,7 @@ var _my_game_id: int = 0
 var _peer_connections: Dictionary = {}  # game_id (int) -> WebRTCPeerConnection
 var _proximity_buf := PackedByteArray()
 var _pending_call_peers: Variant = null  # null = waiting, Array = received
+var _pending_signals: Array = []         # signals buffered before _my_game_id is set
 
 
 func _log(msg: String) -> void:
@@ -95,6 +96,11 @@ func create_client() -> Error:
 		return err
 
 	_my_game_id = my_id
+	# Replay any signals that arrived before we were fully initialized.
+	var buffered := _pending_signals.duplicate()
+	_pending_signals.clear()
+	for msg in buffered:
+		_handle_signal(msg)
 	update_peer({"game_id": my_id})
 	_log("create_client: OK — game_id=%d" % my_id)
 	return OK
@@ -130,11 +136,18 @@ func start_peer(peer_game_id: int) -> void:
 	var offering := _my_game_id != 0 and _my_game_id < peer_game_id
 	_log("start_peer: %d → %d (%s)" % [_my_game_id, peer_game_id, "offering" if offering else "waiting for offer"])
 	var conn := WebRTCPeerConnection.new()
-	conn.initialize({"iceServers": _ICE_SERVERS})
+	var init_err := conn.initialize({"iceServers": _ICE_SERVERS})
+	if init_err != OK:
+		_log("start_peer: initialize failed — err=%d (WebRTC extension missing?)" % init_err)
+		return
 	conn.session_description_created.connect(_on_session_description.bind(peer_game_id))
 	conn.ice_candidate_created.connect(_on_ice_candidate.bind(peer_game_id))
 	_peer_connections[peer_game_id] = conn
-	_multiplayer_peer.add_peer(conn, peer_game_id)
+	var add_err := _multiplayer_peer.add_peer(conn, peer_game_id)
+	if add_err != OK:
+		_log("start_peer: add_peer failed — err=%d" % add_err)
+		_peer_connections.erase(peer_game_id)
+		return
 	if offering:
 		conn.create_offer()
 
@@ -214,6 +227,9 @@ func _process(_delta: float) -> void:
 
 
 func _handle_signal(msg: Dictionary) -> void:
+	if _my_game_id == 0:
+		_pending_signals.append(msg)
+		return
 	var from: int = msg.get("from", 0)
 	var signal_type: String = msg.get("signal_type", "")
 	if from == 0:
