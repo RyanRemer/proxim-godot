@@ -7,7 +7,9 @@ var _web_socket := WebSocketPeer.new()
 var _multiplayer_peer := WebRTCMultiplayerPeer.new()
 var _my_game_id: int = 0
 var _peer_connections: Dictionary = {}  # game_id (int) -> WebRTCPeerConnection
-var _proximity_buf := PackedByteArray()
+var _gain_hot_buf := PackedByteArray()
+var _panner_hot_buf := PackedByteArray()
+var _listener_hot_buf := PackedByteArray()
 var _pending_call_peers: Variant = null  # null = waiting, Array = received
 var _pending_signals: Array = []         # signals buffered before _my_game_id is set
 
@@ -19,7 +21,9 @@ func _log(msg: String) -> void:
 
 
 func _ready() -> void:
-	_proximity_buf.resize(8)
+	_gain_hot_buf.resize(5)
+	_panner_hot_buf.resize(16)
+	_listener_hot_buf.resize(18)
 	_multiplayer_peer.peer_disconnected.connect(_on_peer_disconnected)
 
 
@@ -166,22 +170,83 @@ func _on_ice_candidate(media: String, index: int, candidate_name: String, peer_g
 	send_signal(peer_game_id, "ice", {"media": media, "index": index, "name": candidate_name})
 
 
-## Send a compact 8-byte proximity update. Call every frame / physics tick.
-## State changes (mute, panner) go through update_peer instead.
+## Send a compact 5-byte relative gain update. Call every frame / physics tick.
 ##
 ## Packet layout:
-##   slot  uint8    1 byte  — peer slot index
-##   x     float16  2 bytes — world position (bytes 1–2)
-##   y     float16  2 bytes — (bytes 3–4)
-##   z     float16  2 bytes — (bytes 5–6)
-##   gain  uint8    1 byte  — 0–255 mapped to 0.0–1.0 (byte 7)
-func update_proximity(slot: int, x: float, y: float, z: float, gain: float) -> void:
-	_proximity_buf[0] = slot & 0xFF
-	_proximity_buf.encode_half(1, x)
-	_proximity_buf.encode_half(3, y)
-	_proximity_buf.encode_half(5, z)
-	_proximity_buf[7] = int(clampf(gain, 0.0, 1.0) * 255.0) & 0xFF
-	_web_socket.send(_proximity_buf)
+##   game_id  uint32 LE  4 bytes — peer game_id
+##   gain     uint8      1 byte  — 0–255 mapped to 0.0–1.0
+func update_gain_hot(game_id: int, gain: float) -> void:
+	_gain_hot_buf.encode_u32(0, game_id)
+	_gain_hot_buf[4] = int(clampf(gain, 0.0, 1.0) * 255.0) & 0xFF
+	_web_socket.send(_gain_hot_buf)
+
+
+## Send a compact 16-byte hot panner update. Call every frame / physics tick for
+## peers whose position or orientation changes frequently.
+## Use update_panner_props for model types, distances, cone angles, etc.
+##
+## Packet layout:
+##   game_id       uint32 LE  4 bytes — peer game_id (bytes 0–3)
+##   position_x    float16    2 bytes — (bytes 4–5)
+##   position_y    float16    2 bytes — (bytes 6–7)
+##   position_z    float16    2 bytes — (bytes 8–9)
+##   orientation_x float16    2 bytes — (bytes 10–11)
+##   orientation_y float16    2 bytes — (bytes 12–13)
+##   orientation_z float16    2 bytes — (bytes 14–15)
+func update_panner_hot(game_id: int, position_x: float, position_y: float, position_z: float,
+		orientation_x: float, orientation_y: float, orientation_z: float) -> void:
+	_panner_hot_buf.encode_u32(0,  game_id)
+	_panner_hot_buf.encode_half(4,  position_x)
+	_panner_hot_buf.encode_half(6,  position_y)
+	_panner_hot_buf.encode_half(8,  position_z)
+	_panner_hot_buf.encode_half(10, orientation_x)
+	_panner_hot_buf.encode_half(12, orientation_y)
+	_panner_hot_buf.encode_half(14, orientation_z)
+	_web_socket.send(_panner_hot_buf)
+
+
+## Send full PannerProps for a peer as JSON. Use for infrequent changes such as
+## panning/distance model, ref_distance, max_distance, rolloff_factor, and cone angles.
+## game_id: peer game_id
+## data: Dictionary with any subset of PannerProps keys (snake_case).
+func update_panner_props(game_id: int, data: Dictionary) -> void:
+	_web_socket.send_text(JSON.stringify({"type": "update_panner_props", "game_id": game_id, "data": data}))
+
+
+## Send a compact 18-byte hot listener update. Call every frame / physics tick
+## when the listener position or orientation changes frequently.
+## Use update_listener_props for a one-shot full update instead.
+##
+## Packet layout:
+##   position_x float16  2 bytes — (bytes 0–1)
+##   position_y float16  2 bytes — (bytes 2–3)
+##   position_z float16  2 bytes — (bytes 4–5)
+##   forward_x  float16  2 bytes — (bytes 6–7)
+##   forward_y  float16  2 bytes — (bytes 8–9)
+##   forward_z  float16  2 bytes — (bytes 10–11)
+##   up_x       float16  2 bytes — (bytes 12–13)
+##   up_y       float16  2 bytes — (bytes 14–15)
+##   up_z       float16  2 bytes — (bytes 16–17)
+func update_listener_hot(position_x: float, position_y: float, position_z: float,
+		forward_x: float, forward_y: float, forward_z: float,
+		up_x: float, up_y: float, up_z: float) -> void:
+	_listener_hot_buf.encode_half(0,  position_x)
+	_listener_hot_buf.encode_half(2,  position_y)
+	_listener_hot_buf.encode_half(4,  position_z)
+	_listener_hot_buf.encode_half(6,  forward_x)
+	_listener_hot_buf.encode_half(8,  forward_y)
+	_listener_hot_buf.encode_half(10, forward_z)
+	_listener_hot_buf.encode_half(12, up_x)
+	_listener_hot_buf.encode_half(14, up_y)
+	_listener_hot_buf.encode_half(16, up_z)
+	_web_socket.send(_listener_hot_buf)
+
+
+## Send full ListenerProps as JSON. Use for infrequent / one-shot updates where
+## binary precision isn't a concern, or when you only need to set a subset of fields.
+## data: Dictionary with any subset of ListenerProps keys (snake_case).
+func update_listener_props(data: Dictionary) -> void:
+	_web_socket.send_text(JSON.stringify({"type": "update_listener_props", "data": data}))
 
 
 ## Request the current call peers from Proxim. Returns an Array of Dictionaries,
