@@ -25,15 +25,11 @@ func _ready() -> void:
 func _on_proximity_mode_changed(mode: String) -> void:
 	_proximity_mode = mode
 	_update_proximity_label()
-	if mode == "off" and _using_proxim:
-		_reset_proximity_audio()
-
-func _reset_proximity_audio() -> void:
-	var my_id := multiplayer.get_unique_id()
-	for peer_id: int in _players:
-		if peer_id == my_id:
-			continue
-		$ProximPeer.update_gain_hot(peer_id, 1.0)
+	if not _using_proxim:
+		return
+	$ProximPeer.reset_audio()
+	if mode != "off":
+		_update_proximity_audio()
 
 func _on_local_webrtc_host_pressed() -> void:
 	var err = $LocalWebRTCPeer.create_host()

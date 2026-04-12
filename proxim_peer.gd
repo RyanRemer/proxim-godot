@@ -249,6 +249,27 @@ func update_listener_props(data: Dictionary) -> void:
 	_web_socket.send_text(JSON.stringify({"type": "update_listener_props", "data": data}))
 
 
+## Reset all audio state in the Proxim app to defaults: gain, relative gain,
+## deafened, panner, and listener props for all peers, plus legacyAudio for self.
+func reset_audio() -> void:
+	_web_socket.send_text(JSON.stringify({"type": "reset_audio"}))
+
+
+## Update position interpolation settings. Both parameters are optional — pass
+## null to leave a setting unchanged.
+##   position_interpolation: bool — whether to smooth position/orientation
+##     ramps between updates (default true).
+##   position_frequency: float — ramp duration in seconds, should match your
+##     update interval (default 0.1).
+func update_proximity_settings(position_interpolation: Variant = null, position_frequency: Variant = null) -> void:
+	var msg := {"type": "update_proximity_settings"}
+	if position_interpolation != null:
+		msg["position_interpolation"] = position_interpolation
+	if position_frequency != null:
+		msg["position_frequency"] = position_frequency
+	_web_socket.send_text(JSON.stringify(msg))
+
+
 ## Request the current call peers from Proxim. Returns an Array of Dictionaries,
 ## each with at least a "display_name" key. Returns [] on timeout (2 s).
 func get_call_peers() -> Array:
