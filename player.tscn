@@ -3,13 +3,16 @@
 [ext_resource type="Script" uid="uid://brok6kirw1qi7" path="res://player.gd" id="1_player"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 0.4
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_player"]
+radius = 0.4
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_body"]
 albedo_color = Color(0.3604683, 0.7196149, 0.8661734, 1)
 
 [sub_resource type="BoxMesh" id="BoxMesh_eyes"]
+size = Vector3(0.4, 0.2, 0.1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_eyes"]
 albedo_color = Color(0.28485027, 0.28485027, 0.28485027, 1)
@@ -36,13 +39,16 @@ shape = SubResource("CapsuleShape3D_player")
 mesh = SubResource("CapsuleMesh_player")
 surface_material_override/0 = SubResource("StandardMaterial3D_body")
 
-[node name="Eyes" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.5, 0, 0, 0, 0.3, 0, 0, 0, 0.2, 0, 0.5, -0.4)
-mesh = SubResource("BoxMesh_eyes")
-surface_material_override/0 = SubResource("StandardMaterial3D_eyes")
-
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.54624116, -0.3309623)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.43534207, -0.4390667)
+
+[node name="Eyes" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.43534207, -0.4390667)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Eyes"]
+mesh = SubResource("BoxMesh_eyes")
+skeleton = NodePath("../..")
+surface_material_override/0 = SubResource("StandardMaterial3D_eyes")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_config = SubResource("SceneReplicationConfig_player")

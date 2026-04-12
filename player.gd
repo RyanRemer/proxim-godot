@@ -11,6 +11,9 @@ class_name Player extends CharacterBody3D
 var jumping: bool = false
 var mouse_captured: bool = false
 
+@export_range(0.05, 0.3, 0.01) var coyote_time: float = 0.3 # seconds
+var coyote_timer: float = 0.0
+
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 var move_dir: Vector2 # Input direction for movement
@@ -49,11 +52,15 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed(&"jump"): jumping = true
+	if is_on_floor():
+		coyote_timer = coyote_time
+	else:
+		coyote_timer = max(coyote_timer - delta, 0.0)
 	velocity = _walk(delta) + _gravity(delta) + _jump(delta)
 	move_and_slide()
 
 func _process(_delta: float) -> void:
-	$Eyes.rotation.x = camera_pitch
+	$Eyes.rotation.x = camera_pitch * 0.3
 	if is_multiplayer_authority():
 		_check_interact()
 
@@ -94,7 +101,9 @@ func _gravity(delta: float) -> Vector3:
 
 func _jump(delta: float) -> Vector3:
 	if jumping:
-		if is_on_floor(): jump_vel = Vector3(0, sqrt(4 * jump_height * gravity), 0)
+		if is_on_floor() or coyote_timer > 0.0:
+			jump_vel = Vector3(0, sqrt(4 * jump_height * gravity), 0)
+			coyote_timer = 0.0
 		jumping = false
 		return jump_vel
 	jump_vel = Vector3.ZERO if is_on_floor() or is_on_ceiling_only() else jump_vel.move_toward(Vector3.ZERO, gravity * delta)

@@ -1,15 +1,16 @@
 [gd_scene load_steps=14 format=3 uid="uid://dtjdi4snwyaht"]
 
 [ext_resource type="Script" uid="uid://dxnrmynis88hg" path="res://main.gd" id="1_main"]
-[ext_resource type="PackedScene" uid="uid://cbbtn3dscn1xy" path="res://button.tscn" id="4_btscene"]
 [ext_resource type="Script" uid="uid://bfsm2sk52he2y" path="res://fall_limit.gd" id="2_1bvp3"]
 [ext_resource type="Script" uid="uid://cgk1rdyrhnuxt" path="res://proxim_peer.gd" id="2_proxim"]
 [ext_resource type="Script" uid="uid://cgi5gjvyggfq2" path="res://local_webrtc_peer.gd" id="3_localwebrtc"]
+[ext_resource type="PackedScene" uid="uid://bymo0vurf388y" path="res://button.tscn" id="4_btscene"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ig7tw"]
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_lquwl"]
+sky_energy_multiplier = 1.4
 
 [sub_resource type="Sky" id="Sky_0xm2m"]
-sky_material = SubResource("ProceduralSkyMaterial_ig7tw")
+sky_material = SubResource("ProceduralSkyMaterial_lquwl")
 
 [sub_resource type="Environment" id="Environment_h2yge"]
 background_mode = 2
@@ -28,7 +29,7 @@ size = Vector3(2, 1, 2)
 size = Vector3(2, 1, 2)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_falllimit"]
-size = Vector3(200, 1, 200)
+size = Vector3(500, 1, 500)
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -63,6 +64,16 @@ skeleton = NodePath("../..")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Platforms/BigPlatform2"]
 shape = SubResource("BoxShape3D_1bvp3")
 
+[node name="BigPlatform3" type="StaticBody3D" parent="Platforms"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 24)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Platforms/BigPlatform3"]
+mesh = SubResource("BoxMesh_h2yge")
+skeleton = NodePath("../..")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Platforms/BigPlatform3"]
+shape = SubResource("BoxShape3D_1bvp3")
+
 [node name="SmallPatform1" type="StaticBody3D" parent="Platforms"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, -9)
 
@@ -81,6 +92,26 @@ mesh = SubResource("BoxMesh_1bvp3")
 skeleton = NodePath("../..")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Platforms/SmallPatform2"]
+shape = SubResource("BoxShape3D_lquwl")
+
+[node name="SmallPatform3" type="StaticBody3D" parent="Platforms"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 9)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Platforms/SmallPatform3"]
+mesh = SubResource("BoxMesh_1bvp3")
+skeleton = NodePath("../..")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Platforms/SmallPatform3"]
+shape = SubResource("BoxShape3D_lquwl")
+
+[node name="SmallPatform4" type="StaticBody3D" parent="Platforms"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 14)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Platforms/SmallPatform4"]
+mesh = SubResource("BoxMesh_1bvp3")
+skeleton = NodePath("../..")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Platforms/SmallPatform4"]
 shape = SubResource("BoxShape3D_lquwl")
 
 [node name="ButtonStation" parent="Platforms" instance=ExtResource("4_btscene")]

@@ -11,6 +11,8 @@ var _proximity_mode: String = "off"
 var _using_proxim: bool = false
 
 const PROXIMITY_MAX_DISTANCE := 20.0
+const PROXIMITY_UPDATE_INTERVAL := 0.1  # seconds between proximity audio updates
+var _proximity_timer: float = 0.0
 
 func _ready() -> void:
 	$UI/Modal/Margin/VBox/WebRTCPanel/WebRTCMargin/WebRTCVBox/WebRTCHostButton.pressed.connect(_on_local_webrtc_host_pressed)
@@ -23,6 +25,15 @@ func _ready() -> void:
 func _on_proximity_mode_changed(mode: String) -> void:
 	_proximity_mode = mode
 	_update_proximity_label()
+	if mode == "off" and _using_proxim:
+		_reset_proximity_audio()
+
+func _reset_proximity_audio() -> void:
+	var my_id := multiplayer.get_unique_id()
+	for peer_id: int in _players:
+		if peer_id == my_id:
+			continue
+		$ProximPeer.update_gain_hot(peer_id, 1.0)
 
 func _on_local_webrtc_host_pressed() -> void:
 	var err = $LocalWebRTCPeer.create_host()
@@ -107,9 +118,12 @@ func _despawn_player(peer_id: int) -> void:
 	_players[peer_id].queue_free()
 	_players.erase(peer_id)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if _proximity_mode != "off" and _using_proxim:
-		_update_proximity_audio()
+		_proximity_timer += delta
+		if _proximity_timer >= PROXIMITY_UPDATE_INTERVAL:
+			_proximity_timer = 0.0
+			_update_proximity_audio()
 
 func _update_proximity_audio() -> void:
 	var my_id := multiplayer.get_unique_id()
