@@ -3,6 +3,16 @@ extends Node
 const _PROXIM_URL := "ws://127.0.0.1:5656"
 const _ICE_SERVERS := [{"urls": ["stun:stun.l.google.com:19302"]}]
 
+## Emitted when Proxim leaves its voice call (intentional leave, kick, or network drop).
+## Listen to this to clean up any voice-dependent state.
+signal proxim_disconnected()
+
+## Emitted when Proxim joins a voice call and is ready to receive peer state.
+## The addon automatically resends the last update_peer data before emitting this,
+## so game_id and is_host are already restored. Use this signal to resend any
+## audio settings (reset_audio, update_panner_props, etc.).
+signal proxim_connected()
+
 var _web_socket := WebSocketPeer.new()
 var _multiplayer_peer := WebRTCMultiplayerPeer.new()
 var _my_game_id: int = 0
@@ -12,6 +22,7 @@ var _panner_hot_buf := PackedByteArray()
 var _listener_hot_buf := PackedByteArray()
 var _pending_call_peers: Variant = null  # null = waiting, Array = received
 var _pending_signals: Array = []         # signals buffered before _my_game_id is set
+var _last_peer_data: Dictionary = {}     # last data sent via update_peer — resent on proxim_connected
 
 
 func _log(msg: String) -> void:
@@ -118,6 +129,7 @@ func get_multiplayer_peer() -> WebRTCMultiplayerPeer:
 ## Keys match Peer fields: uid, display_name, is_host, muted, gain,
 ## panner_enabled, deafened, coordinates ([x, y, z]).
 func update_peer(data: Dictionary) -> void:
+	_last_peer_data.merge(data, true)
 	_web_socket.send_text(JSON.stringify({"type": "update_peer", "data": data}))
 
 
@@ -310,6 +322,14 @@ func _process(_delta: float) -> void:
 				start_peer(peer_id)
 			"signal":
 				_handle_signal(msg)
+			"proxim_disconnected":
+				_log("proxim_disconnected")
+				proxim_disconnected.emit()
+			"proxim_connected":
+				_log("proxim_connected — resending peer state")
+				if not _last_peer_data.is_empty():
+					_web_socket.send_text(JSON.stringify({"type": "update_peer", "data": _last_peer_data}))
+				proxim_connected.emit()
 
 
 func _handle_signal(msg: Dictionary) -> void:
