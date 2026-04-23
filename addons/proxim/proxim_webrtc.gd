@@ -3,13 +3,10 @@ class_name ProximWebRTC
 
 ## Optional helper that builds a Godot WebRTCMultiplayerPeer on top of
 ## ProximPeer's generic relay (relay_to / peer_message). Drop this node
-## as a child alongside a ProximPeer node and point `proxim_peer_path`
-## at it, or set `proxim_peer` directly in code before calling create_host
-## or create_client.
+## anywhere in your scene and call create_host or create_client — it
+## talks to the ProximPeer autoload directly.
 
 const _ICE_SERVERS := [{"urls": ["stun:stun.l.google.com:19302"]}]
-
-@export var proxim_peer_path: NodePath
 
 var _multiplayer_peer := WebRTCMultiplayerPeer.new()
 var _peer_connections: Dictionary = {}  # game_id (int) -> WebRTCPeerConnection

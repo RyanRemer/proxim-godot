@@ -15,10 +15,10 @@ const PROXIMITY_UPDATE_INTERVAL := 0.1  # seconds between proximity audio update
 var _proximity_timer: float = 0.0
 
 func _ready() -> void:
-	$UI/Modal/Margin/VBox/WebRTCPanel/WebRTCMargin/WebRTCVBox/WebRTCHostButton.pressed.connect(_on_local_webrtc_host_pressed)
-	$UI/Modal/Margin/VBox/WebRTCPanel/WebRTCMargin/WebRTCVBox/WebRTCJoinButton.pressed.connect(_on_local_webrtc_join_pressed)
-	$UI/Modal/Margin/VBox/ProximPanel/ProximMargin/ProximVBox/ProximHostButton.pressed.connect(_on_proxim_host_pressed)
-	$UI/Modal/Margin/VBox/ProximPanel/ProximMargin/ProximVBox/ProximJoinButton.pressed.connect(_on_proxim_join_pressed)
+	%WebRTCHostButton.pressed.connect(_on_local_webrtc_host_pressed)
+	%WebRTCJoinButton.pressed.connect(_on_local_webrtc_join_pressed)
+	%ProximHostButton.pressed.connect(_on_proxim_host_pressed)
+	%ProximJoinButton.pressed.connect(_on_proxim_join_pressed)
 	_button_station.proximity_mode_changed.connect(_on_proximity_mode_changed)
 	_update_proximity_label()
 

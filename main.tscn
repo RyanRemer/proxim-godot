@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dxnrmynis88hg" path="res://main.gd" id="1_main"]
 [ext_resource type="Script" uid="uid://bfsm2sk52he2y" path="res://fall_limit.gd" id="2_1bvp3"]
-[ext_resource type="Script" uid="uid://lwdpm64b4vdo" path="res://proxim_webrtc.gd" id="2_proxim"]
+[ext_resource type="Script" uid="uid://lwdpm64b4vdo" path="res://addons/proxim/proxim_webrtc.gd" id="2_proxim"]
 [ext_resource type="Script" uid="uid://cgi5gjvyggfq2" path="res://local_webrtc_peer.gd" id="3_localwebrtc"]
 [ext_resource type="PackedScene" uid="uid://bymo0vurf388y" path="res://button.tscn" id="4_btscene"]
 
@@ -184,14 +184,24 @@ theme_override_constants/separation = 6
 
 [node name="WebRTCTitle" type="Label" parent="UI/Modal/Margin/VBox/WebRTCPanel/WebRTCMargin/WebRTCVBox"]
 layout_mode = 2
-text = "WebRTC (Local)"
+theme_override_font_sizes/font_size = 24
+text = "Local (No Proxim)"
 horizontal_alignment = 1
 
+[node name="WebRTCHelper" type="Label" parent="UI/Modal/Margin/VBox/WebRTCPanel/WebRTCMargin/WebRTCVBox"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+text = "Verifies the WebRTC extension is installed."
+horizontal_alignment = 1
+autowrap_mode = 2
+
 [node name="WebRTCHostButton" type="Button" parent="UI/Modal/Margin/VBox/WebRTCPanel/WebRTCMargin/WebRTCVBox"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Host"
 
 [node name="WebRTCJoinButton" type="Button" parent="UI/Modal/Margin/VBox/WebRTCPanel/WebRTCMargin/WebRTCVBox"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Join"
 
@@ -211,14 +221,24 @@ theme_override_constants/separation = 6
 
 [node name="ProximTitle" type="Label" parent="UI/Modal/Margin/VBox/ProximPanel/ProximMargin/ProximVBox"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 24
 text = "Proxim"
 horizontal_alignment = 1
 
+[node name="ProximHelper" type="Label" parent="UI/Modal/Margin/VBox/ProximPanel/ProximMargin/ProximVBox"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+text = "Requires the Proxim app to be running."
+horizontal_alignment = 1
+autowrap_mode = 2
+
 [node name="ProximHostButton" type="Button" parent="UI/Modal/Margin/VBox/ProximPanel/ProximMargin/ProximVBox"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Host"
 
 [node name="ProximJoinButton" type="Button" parent="UI/Modal/Margin/VBox/ProximPanel/ProximMargin/ProximVBox"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Join"
 
