@@ -5,7 +5,7 @@ multiplayer over Proxim's signaling channel plus spatial voice chat
 (gain falloff or full 3D panner) in one scene.
 
 The reusable part is [`addons/proxim/`](addons/proxim/). Everything else
-in this repo is the demo.
+in this repo is the demo. **Look at the README.md file in that directory for more instructions**
 
 ## Run the demo
 
