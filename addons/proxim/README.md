@@ -18,10 +18,9 @@ WebSocket. Exposes three things:
 2. In Godot, open **Project → Project Settings → Plugins** and tick **Enable**
    next to "Proxim". The `ProximPeer` autoload appears automatically.
 3. If you want WebRTC multiplayer transport, also install the
-   [godot-webrtc-native](https://github.com/godotengine/webrtc-native)
+   [godot-webrtc-native](https://github.com/godotengine/webrtc-native/releases/tag/1.1.0-stable)
    GDExtension (not bundled — track its releases independently). For the
-   audio-only path you do not need it.
-
+   audio-only path you do not need it. 
 ---
 
 ## Usage
@@ -32,25 +31,91 @@ Three usage paths, depending on which parts of Proxim you actually want.
 
 You want WebRTC signaling + voice chat; you do not want spatial audio.
 
+Drop a `ProximWebRTC` node into your scene tree. That's it — none of the `*_gain_node` / `*_panner_node` / `hot_listener_node` APIs need to be called.
+
+For testing locally - just hop in a proxim call by yourself and then trigger "create_host" in game. After basic testing you can have a friend join your call and then trigger "create_client" when you are ready to test multiplayer with them. To test local multiplayer (multiple debug instances) you'll need to either do local ENET or local WebRTC multiplayer peers for that.
+
+#### Minimal Example
+For the bare minimium for those familar with Godot, here is the minimal snippet of code.
 ```gdscript
 extends Node
 
-@onready var _webrtc: ProximWebRTC = $ProximWebRTC
+@onready var proxim_web_rtc: ProximWebRTC = $ProximWebRTC
 
 func _ready() -> void:
     # Host:
-    var err := await _webrtc.create_host()
+    var err := await proxim_web_rtc.create_host()
     if err != OK: return
-    multiplayer.multiplayer_peer = _webrtc.get_multiplayer_peer()
+    multiplayer.multiplayer_peer = proxim_web_rtc.get_multiplayer_peer()
 
     # ...or Client:
-    # var err := await _webrtc.create_client()
+    # var err := await proxim_web_rtc.create_client()
     # if err != OK: return
-    # multiplayer.multiplayer_peer = _webrtc.get_multiplayer_peer()
+    # multiplayer.multiplayer_peer = proxim_web_rtc.get_multiplayer_peer()
 ```
 
-Drop a `ProximWebRTC` node into your scene tree. That's it — none of the
-`*_gain_node` / `*_panner_node` / `hot_listener_node` APIs need to be called.
+#### Main.gd Example
+For those new to multiplayer in Godot, here is what a main.gd file might look like
+```
+extends Node3D
+
+# From the Proxim addon
+@onready var proxim_web_rtc: ProximWebRTC = $ProximWebRTC
+
+# A simple gui with some buttons and a label for errors
+@onready var multiplayer_gui: CenterContainer = $CanvasLayer/MultiplayerGUI
+@onready var connection_message: Label = $CanvasLayer/MultiplayerGUI/PanelContainer/VBoxContainer/ConnectionMessage
+
+# A Node3D (spawnpoint) and player prefab
+@onready var players: Node3D = $Players
+const PLAYER = preload("uid://bcthojlfc5ira")
+# Player prefab has a MultiplayerSynchronizer that syncs whatever properties you want.
+# Player prefab also has set_physics_process(multiplayer.get_unique_id() == get_multiplayer_authority());
+# which enables movement input for your character and disables movement input for other characters
+
+func _on_host_button_pressed() -> void:
+	connection_message.text = "Connecting to Proxim...";
+	var err := await proxim_web_rtc.create_host()
+	if err != OK: 
+		connection_message.text = "Error connecting " + str(err)
+		return
+	multiplayer.multiplayer_peer = proxim_web_rtc.get_multiplayer_peer()
+	multiplayer.peer_connected.connect(_on_peer_connected)
+	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	multiplayer_gui.visible = false;
+	connection_message.text = "";
+	_on_connected_to_server();
+
+func _on_join_button_pressed() -> void:
+	connection_message.text = "Connecting to Proxim...";
+	var err := await proxim_web_rtc.create_client()
+	if err != OK: 
+		connection_message.text = "Error connecting " + str(err)
+		return
+	multiplayer.multiplayer_peer = proxim_web_rtc.get_multiplayer_peer()
+	multiplayer.peer_connected.connect(_on_peer_connected)
+	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	multiplayer.connected_to_server.connect(_on_connected_to_server)
+	multiplayer_gui.visible = false;
+	connection_message.text = "";
+	
+func _on_peer_connected(peer_id):
+	_spawn_player(peer_id);
+	
+func _on_connected_to_server():
+	_spawn_player(multiplayer.get_unique_id())
+
+func _on_peer_disconnected(peer_id):
+	for child in players.get_children():
+		if child.name == str(peer_id):
+			child.queue_free();
+	
+func _spawn_player(peer_id):
+	var player := PLAYER.instantiate()
+	player.name = str(peer_id);
+	player.set_multiplayer_authority(peer_id);
+	players.add_child(player);	
+```
 
 ### Proximity chat (bring your own multiplayer)
 
