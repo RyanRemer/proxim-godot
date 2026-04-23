@@ -1,10 +1,10 @@
 [gd_scene load_steps=14 format=3 uid="uid://dtjdi4snwyaht"]
 
-[ext_resource type="Script" uid="uid://dxnrmynis88hg" path="res://main.gd" id="1_main"]
-[ext_resource type="Script" uid="uid://bfsm2sk52he2y" path="res://fall_limit.gd" id="2_1bvp3"]
+[ext_resource type="Script" uid="uid://dxnrmynis88hg" path="res://example/main.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://bfsm2sk52he2y" path="res://example/fall_limit.gd" id="2_1bvp3"]
 [ext_resource type="Script" uid="uid://lwdpm64b4vdo" path="res://addons/proxim/proxim_webrtc.gd" id="2_proxim"]
-[ext_resource type="Script" uid="uid://cgi5gjvyggfq2" path="res://local_webrtc_peer.gd" id="3_localwebrtc"]
-[ext_resource type="PackedScene" uid="uid://bymo0vurf388y" path="res://button.tscn" id="4_btscene"]
+[ext_resource type="Script" uid="uid://cgi5gjvyggfq2" path="res://example/local_webrtc_peer.gd" id="3_localwebrtc"]
+[ext_resource type="PackedScene" uid="uid://bymo0vurf388y" path="res://example/button.tscn" id="4_btscene"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_lquwl"]
 sky_energy_multiplier = 1.4
