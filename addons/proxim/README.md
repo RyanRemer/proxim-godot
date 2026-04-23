@@ -123,7 +123,7 @@ You already have multiplayer (ENet, Steam, Nakama, …) and just want Proxim
 for spatial voice. Use the `ProximPeer` autoload directly and map your own
 peer IDs onto Proxim `gameId`s.
 
-Both flavors start the same way:
+Both proximity features start the same way (not needed if already using multiplayer):
 
 ```gdscript
 func _ready() -> void:
@@ -134,19 +134,49 @@ func _ready() -> void:
     ProximPeer.update_call_peer({"gameId": my_id})
 ```
 
+#### Update cadence
+
+Proxim provides `hot_*` methods for updates that need to happen frequently. For proximity chat this is either player volume levels (if using the `gain` node) or player positions and orientations (if using the `panner` node). By default Proxim smooths these values so you don't need to update every frame. The default ramp is **0.1 seconds**. More frequent updates leads to smoother audio but a tradeoff of performance due to packet processing time. If you want a different cadence you can change it like so:
+
+```gdscript
+# Default behaviour — equivalent to not calling this at all.
+ProximPeer.set_proximity_interpolation(true, 0.1)
+
+# Snappier: 20 Hz updates, 0.05 s ramp.
+ProximPeer.set_proximity_interpolation(true, 0.05)
+
+# Disable interpolation for instant snaps (e.g. teleports).
+ProximPeer.set_proximity_interpolation(false, 0.0)
+```
+
+The examples below use a 0.1 s `Timer` to match the default.
+
 #### Gain
 
 Distance-based volume falloff. Cheapest option — no HRTF, no listener pose. Also can be used in combination with panner for cases where the players locations are similar but shouldn't be able to hear each other.
 
 ```gdscript
-func _on_peer_joined(peer_id: int) -> void:
-    ProximPeer.add_gain_node(peer_id)
+@onready var _proxim_tick: Timer = $ProximTick  # Timer node, wait_time = 0.1, autostart = true
 
-func _process(_delta: float) -> void:
-    for peer_id: int in _remote_peers:
-        var dist := _my_pos.distance_to(_remote_peers[peer_id].global_position)
-        var gain := 1.0 - clampf(dist / MAX_DISTANCE, 0.0, 1.0)
-        ProximPeer.hot_gain_node(peer_id, gain)
+# Call ProximPeer.add_gain_node(peer_id) for each peer when you want to enable proximity chat
+
+# Example implementation, but there are plenty of other ways to do this
+func _on_proxim_tick_timeout() -> void: # Connected via node signals
+	var my_id = multiplayer.get_unique_id();
+	var my_player = null;
+	for child in players.get_children():
+		if child.get_multiplayer_authority() == my_id:
+			my_player = child;
+			break;
+	
+	if my_player == null:
+		return;
+		
+	for player in players.get_children():
+		if player is Player and player.get_multiplayer_authority() != my_id:
+			var dist = my_player.position.distance_to(player.position)
+			var gain = 1.0 - clampf(dist / MAX_DISTANCE, 0.0, 1.0)
+			ProximPeer.hot_gain_node(player.get_multiplayer_authority(), gain);
 ```
 
 #### Panner
@@ -156,10 +186,12 @@ listener pose (from the local player's camera) plus a panner per remote
 peer.
 
 ```gdscript
+@onready var _proxim_tick: Timer = $ProximTick  # Timer node, wait_time = 0.1, autostart = true
+
 func _on_peer_joined(peer_id: int) -> void:
     ProximPeer.add_panner_node(peer_id)
 
-func _process(_delta: float) -> void:
+func _on_proxim_tick_timeout() -> void: # Connected via node signals
     var cam: Camera3D = $Camera3D
     var pos := cam.global_position
     var fwd := -cam.global_transform.basis.z
