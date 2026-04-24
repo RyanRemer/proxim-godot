@@ -56,7 +56,7 @@ func _ready() -> void:
 
 #### Main.gd Example
 For those new to multiplayer in Godot, here is what a main.gd file might look like
-```
+```gdscript
 extends Node3D
 
 # From the Proxim addon
