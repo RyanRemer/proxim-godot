@@ -4,11 +4,13 @@ Godot 4 addon that talks to the **Proxim companion app** over a local
 WebSocket. Exposes three things:
 
 - **Peer-to-peer relay** — a generic `relay_to` / `peer_message` channel you
-  can build anything on top of.
+  can build anything on top of. Useful for game setup and/or games that don't need the speed (turn based games as an example)
 - **WebRTC multiplayer transport** — optional helper node that turns the relay
-  into a Godot `WebRTCMultiplayerPeer`.
-- **Spatial audio controls** — gain / panner / listener updates that map 1:1
-  to the Web Audio API.
+  into a Godot `WebRTCMultiplayerPeer`. Useful for games that need the speed, after setup the game uses a separate connection from the call that is optimized for godot.
+- **Spatial audio controls** — gain / panner / listener updates that maps pretty much 1:1
+  to the [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API).
+
+These features can be used independently or together, its up to your implementation.
 
 ---
 
@@ -19,13 +21,38 @@ WebSocket. Exposes three things:
    next to "Proxim". The `ProximPeer` autoload appears automatically.
 3. If you want WebRTC multiplayer transport, also install the
    [godot-webrtc-native](https://github.com/godotengine/webrtc-native/releases/tag/1.1.0-stable)
-   GDExtension (not bundled — track its releases independently). For the
-   audio-only path you do not need it. 
+   GDExtension (not bundled — track its releases independently). Note that Godot configures WebRTC for Web
+   based games out-of-the-box, if you are building a Windows game you'll need this.
+---
+
+## Proxim Overview
+
+A quick overview of proxim. Proxim creates a peer to peer voicecall for a small group. The SDK allows godot games to relay messages to each other or manipulate audio on the call. Here are some examples:
+
+- get_call_peers - gets a JSON object list about peers in the Proxim Call
+- update_call_peer - updates information about yourself (godot multiplayer peer_id, if you are the host, etc)
+- relay_to - sends any message to another proxim call peer
+
+For audio nodes, proxim currently uses [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API). Here are brief summaries of the proxim SDK functions, more information can be found in their documentation.
+
+**Gain Node**
+- add_gain_node - Adds a node where you can control the desired peer's gain (volume).
+- remove_gain_node - Removes the gain node
+- update_gain_node - Infrequent updates to the gain node. Example: If a player dies you can set the gain to 0%
+- hot_gain_node - Frequent updates to the gain node. Example: Setting gain based on relative distance
+
+**Panner Node**
+- add_panner_node - A node that allows spatial audio for the desired peer. Example: A peer standing to the right of you will sound in the right earbud.
+- remove_panner_node - Removes the panner node
+- update_panner_node - Infrequent updates to the panner mode. If you (for some reason) need to change the panner node config mid-game
+- hot_panner_node - Frequent updates for the peer position and orientation
+- hot_listener_node - Frequent updates for self position and orientation
+
 ---
 
 ## Usage
 
-Three usage paths, depending on which parts of Proxim you actually want.
+This section contains code snippets to get started with either multiplayer or the audio SDK.
 
 ### Multiplayer transport (WebRTC + voice, no spatial audio)
 
@@ -123,7 +150,9 @@ You already have multiplayer (ENet, Steam, Nakama, …) and just want Proxim
 for spatial voice. Use the `ProximPeer` autoload directly and map your own
 peer IDs onto Proxim `gameId`s.
 
-Both proximity features start the same way (not needed if already using multiplayer):
+Both proximity features start the same way by connection to the local websocket:
+
+Note: if you are using the multiplayer implementation then you are already connected, and can skip this step.
 
 ```gdscript
 func _ready() -> void:
